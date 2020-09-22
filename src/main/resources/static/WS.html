@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.3.0/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stomp-websocket-js@1.0.0/lib/stomp.js"></script>
+    <script src="http://lib.sinaapp.com/js/jquery/3.1.0/jquery-3.1.0.min.js"></script>
+
+    <script>
+
+        $(document).ready(function(){
+
+        });
+        //var url = 'ws://' + window.location.host + '/marco';
+        //console.log("url:" + url);
+        //var sock = new WebSocket(url);
+
+        var url = 'http://' + window.location.host + '/marcopolo';
+        var sock = new SockJS(url);
+
+        var stomp = Stomp.over(sock);
+        var payload = JSON.stringify({ 'message': 'Marco!' });
+        var chatroomload = JSON.stringify({ 'message': 'chat room!' });
+
+        var shoutload = JSON.stringify({ 'message': 'shout me!' });
+
+        stomp.connect({}, function(frame) {
+            //stomp.subscribe("/app/marco", handleSpittle);
+            //stomp.subscribe("/topic/marco", handleSpittle);
+            //stomp.subscribe("/topic/chat-room/1", showMsg);
+            //stomp.subscribe("/topic/shout", handleSpittle);
+
+            //stomp.subscribe("/topic/user/login", presence);
+            //stomp.subscribe("/topic/user/logout", presence);
+
+            stomp.send("/app/marco", {}, payload);
+
+            //stomp.subscribe("/user/queue/notifications", notifications);
+            console.log("You are now connected.");
+        }, function(error){
+            console.log("You are now disconnected." + error);
+        });
+
+        function handleSpittle(txt) {
+            console.log(txt);
+        }
+
+        function presence(txt) {
+            console.log(txt);
+        }
+
+        function notifications(txt) {
+            console.log("notifications start");
+            console.log(txt.body);
+            console.log("notifications end");
+        }
+
+        function send() {
+            var txt = document.getElementById("txt");
+            stomp.send("/topic/chat-room/1", {}, txt.value);
+        }
+
+        function sendMsg() {
+            var txt = document.getElementById("msg");
+            var who = document.getElementById("who");
+            //stomp.send("/topic/chat-room/1", {}, txt.value);
+
+            stomp.send("/app/marco", {}, JSON.stringify({ 'message': txt.value, 'to': who.value }));
+        }
+
+        function showMsg(txt) {
+            $("#msgList").append("<div>" + txt.body + "</div>");
+        }
+
+        function sendTopic() {
+            var txt = document.getElementById("txt");
+
+            stomp.send("/topic/shout", {}, txt.value);
+            stomp.subscribe("/app/marco", handleSpittle);
+        }
+
+        function getAllUsers() {
+            console.log("getAllUsers start.");
+            $.ajax({
+                type: "get",
+                url: "/getAllUsers",
+                dataType : "json",
+                contentType: "application/json",
+                data: {},
+                success: function (users) {
+                    console.log(users);
+                    for(var i=0; i<users.length; i++) {
+                        $("#allUsers").append("<div>" + users[i] + "</div>");
+                    }
+                }
+            });
+            console.log("getAllUsers end.");
+        }
+
+        function login() {
+            var data = {};
+            data.user = $("#account").val();
+
+            var postJson = JSON.stringify(data);
+            console.log("login data:" + postJson);
+
+            $.ajax({
+                type: "post",
+                url: "/loginUser",
+                dataType : "json",
+                contentType: "application/json",
+                data: postJson,
+                success: function (d) {
+                    console.log(d);
+
+                    stomp.subscribe("/person/queue/" + d.sid, notifications);
+
+                    getAllUsers();
+                }
+            });
+        }
+
+        //sock.onopen = function() {
+        //    console.log('Opening');
+        //    sayMarco();
+        //};
+
+        //sock.onmessage = function(e) {
+        //    console.log('Received message: ', e.data);
+        //    setTimeout(function(){sayMarco()}, 2000);
+        //};
+
+        //sock.onclose = function() {
+        //    console.log('Closing');
+        //};
+
+        //function sayMarco() {
+        //    console.log('Sending Marco!');
+        //    sock.send("Marco!");
+        //}
+    </script>
+</head>
+<body>
+user：<input type="text" id="account" /> <input type="button" onclick="login();" value="lg" />
+
+<br/>
+
+list：
+<div id="allUsers">
+
+
+</div>
+
+<br/>
+Who
+<input type="text" id="who" />
+session
+<input type="text" id="msg" /><input type="button" onclick="sendMsg();" value="sd" />
+<div id="msgList">
+
+
+</div>
+<br/>
+<!--
+命令发送
+<input type="text" id="txt" />
+
+<input type="button" onclick="sendTopic();" value="游戏内部通知" />
+<input type="button" onclick="send();" value="已方行军命令" />
+<br/>
+游戏内部通知（建交、交易，etc.）
+<div id="innernotify">
+
+</div>
+-->
+</body>
+</html>
